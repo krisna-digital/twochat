@@ -1,0 +1,7 @@
+# Dipakai oleh Supabase CLI (opsional). Kedua fungsi melakukan verifikasi token sendiri di dalam kode,
+# sehingga verifikasi JWT bawaan dimatikan (juga diperlukan agar preflight CORS dari browser lolos).
+[functions.reset-room]
+verify_jwt = false
+
+[functions.cleanup]
+verify_jwt = false

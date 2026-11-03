@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0a0a">
+<title>twochat</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230a0a0a'/%3E%3Ccircle cx='12' cy='16' r='6' fill='none' stroke='%23dcdcdc' stroke-width='2'/%3E%3Ccircle cx='20' cy='16' r='6' fill='%23dcdcdc'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main id="app">
+
+  <!-- Loading -->
+  <section id="screen-loading" class="screen center">
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="muted" id="loading-text">Memuat…</p>
+  </section>
+
+  <!-- Login -->
+  <section id="screen-login" class="screen center" hidden>
+    <form id="form-login" class="card" autocomplete="on" novalidate>
+      <div class="mark" aria-hidden="true"><i></i><i></i></div>
+      <h1 class="wordmark">twochat</h1>
+      <p class="muted lead">Ruang obrolan privat untuk dua orang.</p>
+      <label for="login-user">Username</label>
+      <input id="login-user" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required>
+      <label for="login-pass">Password</label>
+      <input id="login-pass" name="password" type="password" autocomplete="current-password" required>
+      <p id="login-err" class="error" role="alert" hidden></p>
+      <button id="login-btn" class="btn primary" type="submit">Masuk</button>
+    </form>
+  </section>
+
+  <!-- Password room / setup room -->
+  <section id="screen-unlock" class="screen center" hidden>
+    <form id="form-unlock" class="card" autocomplete="off" novalidate>
+      <div class="mark lock" aria-hidden="true"><i></i><i></i></div>
+      <h1 id="unlock-title" class="wordmark">Password room</h1>
+      <p id="unlock-hint" class="muted lead"></p>
+      <label for="unlock-pw">Password room</label>
+      <input id="unlock-pw" type="password" autocomplete="off" spellcheck="false" required>
+      <div id="unlock-pw2-wrap" hidden>
+        <label for="unlock-pw2">Ulangi password room</label>
+        <input id="unlock-pw2" type="password" autocomplete="off" spellcheck="false">
+      </div>
+      <p id="unlock-err" class="error" role="alert" hidden></p>
+      <button id="unlock-btn" class="btn primary" type="submit">Buka room</button>
+      <button id="unlock-cancel" class="btn ghost" type="button">Keluar tanpa membuka</button>
+    </form>
+  </section>
+
+  <!-- Chat -->
+  <section id="screen-chat" class="screen chat" hidden>
+    <header class="topbar">
+      <div class="avatar" id="peer-avatar" aria-hidden="true">?</div>
+      <div class="who">
+        <div class="name" id="peer-name">Room privat</div>
+        <div class="status" id="peer-status">offline</div>
+      </div>
+      <button id="btn-timer" class="chip" type="button" aria-label="Pengaturan timer pesan">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span id="timer-label">—</span>
+      </button>
+      <button id="btn-logout" class="icon-btn" type="button" aria-label="Logout dan hapus chat">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="m16 8 4 4-4 4M20 12H9"/></svg>
+      </button>
+    </header>
+
+    <div id="banner" class="banner" role="status" hidden></div>
+
+    <div id="messages" class="messages" tabindex="-1">
+      <div id="empty" class="empty" hidden>
+        <div class="mark big" aria-hidden="true"><i></i><i></i></div>
+        <p class="empty-title">Belum ada pesan</p>
+        <p class="muted">Tulis sesuatu. Semua isi terenkripsi dari perangkat Anda.</p>
+      </div>
+      <div id="list" class="list" role="log" aria-live="polite"></div>
+    </div>
+    <button id="btn-down" class="down" type="button" hidden aria-label="Ke pesan terbaru">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      <span id="down-count"></span>
+    </button>
+
+    <div id="reply-bar" class="reply-bar" hidden>
+      <div class="reply-body">
+        <div id="reply-who" class="reply-who"></div>
+        <div id="reply-text" class="reply-text"></div>
+      </div>
+      <button id="reply-cancel" class="icon-btn" type="button" aria-label="Batalkan balasan">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div id="emoji-panel" class="emoji-panel" hidden></div>
+
+    <form id="composer" class="composer" autocomplete="off" novalidate>
+      <button id="btn-attach" class="icon-btn" type="button" aria-label="Kirim foto">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>
+      </button>
+      <input id="file-input" type="file" accept="image/*" hidden>
+      <button id="btn-emoji" class="icon-btn" type="button" aria-label="Emoji">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.2c.9 1.1 2 1.7 3.5 1.7s2.6-.6 3.5-1.7"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>
+      </button>
+      <textarea id="composer-input" rows="1" maxlength="4000" placeholder="Tulis pesan" aria-label="Tulis pesan"></textarea>
+      <button id="btn-send" class="send" type="submit" aria-label="Kirim">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-8.5 18-2.2-7.3L3 11.5Z"/></svg>
+      </button>
+    </form>
+  </section>
+
+  <!-- Fatal -->
+  <section id="screen-fatal" class="screen center" hidden>
+    <div class="card">
+      <div class="mark err" aria-hidden="true"><i></i><i></i></div>
+      <h1 class="wordmark">Terjadi masalah</h1>
+      <p id="fatal-msg" class="muted lead"></p>
+      <button id="fatal-retry" class="btn primary" type="button">Muat ulang</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- Dialog logout -->
+<dialog id="dlg-logout" aria-labelledby="logout-title">
+  <h2 id="logout-title">Logout dan hapus semua chat?</h2>
+  <p>Seluruh pesan dan foto akan <strong>dihapus permanen</strong> untuk Anda berdua, dan kunci enkripsi room diganti. Ini tidak bisa dibatalkan.</p>
+  <p id="logout-err" class="error" role="alert" hidden></p>
+  <div class="dlg-actions">
+    <button id="logout-cancel" class="btn ghost" type="button">Batal</button>
+    <button id="logout-confirm" class="btn danger" type="button">Logout &amp; hapus</button>
+  </div>
+</dialog>
+
+<!-- Dialog timer -->
+<dialog id="dlg-timer" aria-labelledby="timer-title">
+  <h2 id="timer-title">Timer pesan</h2>
+  <p class="muted">Berlaku untuk pesan yang dikirim setelah ini. Pesan lama tetap memakai timer awalnya.</p>
+  <div id="timer-options" class="opts" role="radiogroup" aria-label="Pilihan timer"></div>
+  <p id="timer-err" class="error" role="alert" hidden></p>
+  <div class="dlg-actions">
+    <button id="timer-cancel" class="btn ghost" type="button">Batal</button>
+    <button id="timer-save" class="btn primary" type="button">Simpan</button>
+  </div>
+</dialog>
+
+<!-- Dialog foto -->
+<dialog id="dlg-photo" aria-labelledby="photo-title">
+  <h2 id="photo-title">Kirim foto</h2>
+  <div class="photo-frame"><img id="photo-preview" alt="Pratinjau foto"></div>
+  <input id="photo-caption" type="text" maxlength="500" placeholder="Tambahkan keterangan (opsional)" autocomplete="off">
+  <p id="photo-err" class="error" role="alert" hidden></p>
+  <div class="dlg-actions">
+    <button id="photo-cancel" class="btn ghost" type="button">Batal</button>
+    <button id="photo-send" class="btn primary" type="button">Kirim</button>
+  </div>
+</dialog>
+
+<!-- Lightbox -->
+<dialog id="dlg-lightbox" class="lightbox" aria-label="Foto">
+  <img id="lightbox-img" alt="Foto">
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/boot.js"></script>
+</body>
+</html>

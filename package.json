@@ -1,0 +1,6 @@
+{
+  "name": "twochat",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node tests/crypto.test.mjs && node tests/syntax.test.mjs" }
+}
