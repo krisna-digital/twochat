@@ -86,8 +86,8 @@ input:focus{border-color:var(--mute)}
 .img-wrap.loading{min-height:120px}
 .img-wrap.failed{cursor:default;display:grid;place-items:center;min-height:90px;font-size:.8rem;opacity:.7}
 .meta{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:3px;font-size:.7rem;opacity:.65;font-variant-numeric:tabular-nums}
-.ticks{letter-spacing:-.15em;opacity:.7}
-.ticks.read{opacity:1;font-weight:700}
+.ticks{letter-spacing:-.15em;opacity:.7;color:#8d8d8d}
+.ticks.read{opacity:1;font-weight:700;color:#03f337}
 .reply-btn{appearance:none;border:0;background:transparent;color:inherit;padding:0 2px;cursor:pointer;opacity:0;line-height:0}
 .reply-btn svg{width:14px;height:14px}
 .bubble:hover .reply-btn,.reply-btn:focus-visible{opacity:.9}
