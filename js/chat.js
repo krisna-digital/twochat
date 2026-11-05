@@ -44,7 +44,7 @@ export class Chat {
     // Suara notifikasi lokal; tidak memerlukan layanan eksternal.
     this.messageAudio = new Audio(new URL('../sounds/message.wav', import.meta.url).href);
     this.messageAudio.preload = 'auto';
-    this.messageAudio.volume = 0.55;
+    this.messageAudio.volume = 100;
     this.soundUnlocked = false;
   }
 
@@ -151,24 +151,13 @@ export class Chat {
   unlockNotificationSound() {
     if (this.soundUnlocked || !this.messageAudio) return;
     const audio = this.messageAudio;
-    audio.muted = true;
+    audio.muted = false;
     audio.currentTime = 0;
-    const attempt = audio.play();
-    if (attempt && typeof attempt.then === 'function') {
-      attempt.then(() => {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.muted = false;
-        this.soundUnlocked = true;
-      }).catch(() => {
-        audio.muted = false;
-      });
-    } else {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.muted = false;
-      this.soundUnlocked = true;
-    }
+    this.soundUnlocked = true;
+    try {
+      const attempt = audio.play();
+      if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
+    } catch { /* browser bisa menolak pemutaran saat belum siap */ }
   }
 
   playMessageSound() {
