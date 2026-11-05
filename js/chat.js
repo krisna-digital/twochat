@@ -41,6 +41,11 @@ export class Chat {
     this.scroller = $('#messages');
     this.list = $('#list');
     this.input = $('#composer-input');
+    // Suara notifikasi lokal; tidak memerlukan layanan eksternal.
+    this.messageAudio = new Audio(new URL('../sounds/message.wav', import.meta.url).href);
+    this.messageAudio.preload = 'auto';
+    this.messageAudio.volume = 0.55;
+    this.soundUnlocked = false;
   }
 
   /* ---------- siklus hidup ---------- */
@@ -93,6 +98,10 @@ export class Chat {
   bind() {
     const on = (el, ev, fn) => el.addEventListener(ev, fn, { signal: this.ac.signal });
     on($('#composer'), 'submit', (e) => { e.preventDefault(); this.submitComposer(); });
+    // Browser memerlukan interaksi pengguna sebelum audio boleh diputar otomatis.
+    const unlockSound = () => this.unlockNotificationSound();
+    on(document, 'pointerdown', unlockSound);
+    on(document, 'keydown', unlockSound);
     const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
     on(this.input, 'keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !coarse) { e.preventDefault(); this.submitComposer(); }
@@ -136,6 +145,39 @@ export class Chat {
     on($('#btn-logout'), 'click', () => this.deps.requestLogout());
     on($('#dlg-lightbox'), 'click', () => $('#dlg-lightbox').close());
     on($('#dlg-lightbox'), 'close', () => { $('#lightbox-img').removeAttribute('src'); });
+  }
+
+  /* ---------- suara notifikasi ---------- */
+  unlockNotificationSound() {
+    if (this.soundUnlocked || !this.messageAudio) return;
+    const audio = this.messageAudio;
+    audio.muted = true;
+    audio.currentTime = 0;
+    const attempt = audio.play();
+    if (attempt && typeof attempt.then === 'function') {
+      attempt.then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+        this.soundUnlocked = true;
+      }).catch(() => {
+        audio.muted = false;
+      });
+    } else {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+      this.soundUnlocked = true;
+    }
+  }
+
+  playMessageSound() {
+    if (!this.soundUnlocked || !this.messageAudio) return;
+    try {
+      this.messageAudio.currentTime = 0;
+      const attempt = this.messageAudio.play();
+      if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
+    } catch { /* audio tidak boleh mengganggu fungsi chat */ }
   }
 
   /* ---------- util tampilan ---------- */
@@ -225,7 +267,8 @@ export class Chat {
 
   onMessageChange(p) {
     if (this.destroyed || this.resetting) return;
-    if (p.eventType === 'INSERT' || p.eventType === 'UPDATE') this.upsertRow(p.new);
+    if (p.eventType === 'INSERT') this.upsertRow(p.new, true);
+    else if (p.eventType === 'UPDATE') this.upsertRow(p.new, false);
     else if (p.eventType === 'DELETE' && p.old && p.old.id) this.removeMessage(p.old.id);
   }
 
@@ -293,7 +336,7 @@ export class Chat {
   }
 
   /* ---------- pesan masuk / render ---------- */
-  async upsertRow(row) {
+  async upsertRow(row, notifyIncoming = false) {
     if (this.destroyed || this.resetting || !row || !row.id) return;
     const ex = this.map.get(row.id);
     if (ex) {
@@ -311,7 +354,8 @@ export class Chat {
         payload = { v: 1, t: 'text', text: '[pesan tidak dapat didekripsi]', broken: true };
       }
       if (this.destroyed || this.resetting || this.map.has(row.id)) return;
-      this.addEntry(row, payload);
+      const added = this.addEntry(row, payload);
+      if (added && notifyIncoming && row.sender_id !== this.ctx.userId) this.playMessageSound();
     } finally {
       this.pending.delete(row.id);
     }
@@ -320,7 +364,7 @@ export class Chat {
   addEntry(row, payload) {
     const created = parseTs(row.created_at);
     const exp = row.expires_at ? parseTs(row.expires_at) : null;
-    if (exp != null && serverNow() >= exp) return;
+    if (exp != null && serverNow() >= exp) return false;
     const entry = { row, payload: payload || {}, created, exp, own: row.sender_id === this.ctx.userId, el: null, fuse: null, ticks: null, blobUrl: null };
     entry.el = this.buildEl(entry);
     let idx = this.order.length;
@@ -334,6 +378,7 @@ export class Chat {
     if (entry.own || wasStick) { this.stick = true; this.scrollToBottom(); }
     else { this.unread++; this.updateDownButton(); }
     if (!entry.own) this.flushReceipts();
+    return true;
   }
 
   buildEl(entry) {
