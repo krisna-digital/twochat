@@ -42,9 +42,12 @@ export class Chat {
     this.list = $('#list');
     this.input = $('#composer-input');
     // Suara notifikasi lokal; tidak memerlukan layanan eksternal.
-    this.messageAudio = new Audio(new URL('../sounds/message.wav', import.meta.url).href);
-    this.messageAudio.preload = 'auto';
-    this.messageAudio.volume = 100;
+    this.messageAudio = null;
+    try {
+      this.messageAudio = new Audio(new URL('../sounds/message.wav', import.meta.url).href);
+      this.messageAudio.preload = 'auto';
+      this.messageAudio.volume = 1; // rentang valid 0..1 (nilai 100 melempar error dan merusak masuk room)
+    } catch { this.messageAudio = null; } // audio tidak boleh menggagalkan chat
     this.soundUnlocked = false;
   }
 
@@ -151,13 +154,16 @@ export class Chat {
   unlockNotificationSound() {
     if (this.soundUnlocked || !this.messageAudio) return;
     const audio = this.messageAudio;
-    audio.muted = false;
-    audio.currentTime = 0;
     this.soundUnlocked = true;
+    // Putar senyap sekali agar browser mengizinkan pemutaran berikutnya tanpa bunyi saat klik pertama.
     try {
+      audio.muted = true;
       const attempt = audio.play();
-      if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
-    } catch { /* browser bisa menolak pemutaran saat belum siap */ }
+      const done = () => { audio.pause(); audio.currentTime = 0; audio.muted = false; };
+      if (attempt && typeof attempt.then === 'function') {
+        attempt.then(done, () => { audio.muted = false; this.soundUnlocked = false; });
+      } else done();
+    } catch { audio.muted = false; this.soundUnlocked = false; }
   }
 
   playMessageSound() {
